@@ -7,6 +7,12 @@
 
 const char *ssid = "TMNL-818E4D";
 const char *password = "DSC8ZLKGLKYFT7";
+const char *hostname = "rgbcontroller";
+const uint8_t addr[] { 192, 168, 1, 99};
+
+IPAddress ipaddress(addr[0], addr[1], addr[2], addr[3]);
+IPAddress gateway(addr[0], addr[1], addr[2], 1);
+IPAddress subnet(255, 255, 255, 0);
 
 int ledPin = LED_BUILTIN;
 WiFiServer server(80);
@@ -87,6 +93,8 @@ void setup()
   Serial.println(ssid);
 
   WiFi.mode(WIFI_STA);
+  WiFi.hostname(hostname);
+  WiFi.config(ipaddress, gateway, subnet);
   WiFi.begin(ssid, password);
 
   while (WiFi.waitForConnectResult() != WL_CONNECTED)
