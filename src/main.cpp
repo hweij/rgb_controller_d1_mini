@@ -4,6 +4,7 @@
 #include <ArduinoOTA.h>
 
 #include "controller.html.h"
+#include "favicon.ico.h"
 
 const char *ssid = "TMNL-818E4D";
 const char *password = "DSC8ZLKGLKYFT7";
@@ -71,6 +72,28 @@ void initOTA()
   ArduinoOTA.begin();
 }
 
+void sendHTMLHeader(WiFiClient client) {
+  // Return the response
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println("Connection: close");
+  client.println(""); //  do not forget this one
+  client.println("<!DOCTYPE HTML>");
+}
+
+void sendImage(WiFiClient client, uint8_t data[], int data_length) {
+  // Return the response
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: image/x-icon");
+  client.print("Content-Length: ");
+  client.println(favicon_data_length);
+  client.println("Connection: close");
+  client.println(""); //  do not forget this one
+  client.write_P((const char *)data, data_length);
+  // client.println("<!DOCTYPE HTML>");
+}
+
+
 void setup()
 {
   Serial.begin(115200);
@@ -137,7 +160,7 @@ void loop()
   }
 
   // Wait until the client sends some data
-  Serial.println("new client");
+  // Serial.println("new client");
 
   int timeOut = 100;
   while (!client.available())
@@ -148,10 +171,9 @@ void loop()
     delay(1);
   }
 
-  // Handle favicon for control page
-  bool sendIcon = false;
+  bool handled = false;
 
-  String request;
+  String request = "";
   if (client.available())
   {
     // Read the first line of the request
@@ -166,7 +188,16 @@ void loop()
       // Main page: controller
       if (request.startsWith("/ ", urlStart))
       {
-        sendIcon = true;
+        // *** Root: display the page
+        sendHTMLHeader(client);
+        client.println(controller_html);
+        handled = true;
+      }
+
+      // Favicon
+      if (request.indexOf("/favicon.ico") >= 0) {
+        // TODO
+        sendImage(client, favicon_data, favicon_data_length);
       }
 
       // Request for RGB values: /api/set, ex: /api/set0,20,1023
@@ -174,6 +205,8 @@ void loop()
       // int rval = -1, gval = -1, bval = -1;
       if (idx != -1)
       {
+        // API call, return plain HTML
+        sendHTMLHeader(client);
         // Find boundaries for r, g, b
         int rstart = idx + 8;
         int gstart = request.indexOf(",", rstart) + 1;
@@ -194,27 +227,30 @@ void loop()
             Serial.printf("r=%i g=%i b=%i\n", r, g, b);
           }
         }
+        client.println("<html>OK</html>");
+        handled = true;
       }
     }
   }
-  // Return the response
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-Type: text/html");
-  client.println("Connection: close");
-  client.println(""); //  do not forget this one
-  client.println("<!DOCTYPE HTML>");
 
-  if (sendIcon)
-  {
-    client.println(controller_html);
+  if (!handled) {
+    sendHTMLHeader(client);
+    client.println("<html>Unknown request:<br/>");
+    client.println(request);
+    client.println("</html>");
   }
-  else
-  {
-    client.print("<html>Request: [");
-    client.print(request);
-    client.println("]</html>");
-    //  client.println("<html>OK</html>");
-  }
+
+  // if (sendIcon)
+  // {
+  //   client.println(controller_html);
+  // }
+  // else
+  // {
+  //   // client.print("<html>Request: [");
+  //   // client.print(request);
+  //   // client.println("]</html>");
+  //    client.println("<html>OK</html>");
+  // }
 
   delay(1);
 
