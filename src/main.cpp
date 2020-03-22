@@ -8,7 +8,7 @@
 const char *ssid = "TMNL-818E4D";
 const char *password = "DSC8ZLKGLKYFT7";
 const char *hostname = "rgbcontroller";
-const uint8_t addr[] { 192, 168, 1, 99};
+const uint8_t addr[]{192, 168, 1, 99};
 
 IPAddress ipaddress(addr[0], addr[1], addr[2], addr[3]);
 IPAddress gateway(addr[0], addr[1], addr[2], 1);
@@ -151,44 +151,48 @@ void loop()
   // Handle favicon for control page
   bool sendIcon = false;
 
+  String request;
   if (client.available())
   {
     // Read the first line of the request
-    String request = client.readStringUntil('\r');
-    Serial.println(request);
+    request = client.readStringUntil('\r');
     client.flush();
 
     // Match the request
 
-    // Main page: controller
-    if (request.indexOf("/controller") >= 0)
+    if (request.startsWith("GET "))
     {
-      sendIcon = true;
-    }
-
-    // Request for RGB values: /RGB=r,g,b, ex: /RGB=0,20,1023
-    int idx = request.indexOf("/RGB=");
-    int rval = -1, gval = -1, bval = -1;
-    if (idx != -1)
-    {
-      // Find boundaries for r, g, b
-      int rstart = idx + 5; // Start of rval
-      int gstart = request.indexOf(",", rstart) + 1;
-      if (gstart > rstart)
+      int urlStart = 4;
+      // Main page: controller
+      if (request.startsWith("/ ", urlStart))
       {
-        int bstart = request.indexOf(",", gstart) + 1;
-        if (bstart > gstart)
+        sendIcon = true;
+      }
+
+      // Request for RGB values: /api/set, ex: /api/set0,20,1023
+      int idx = request.indexOf("/api/set");
+      // int rval = -1, gval = -1, bval = -1;
+      if (idx != -1)
+      {
+        // Find boundaries for r, g, b
+        int rstart = idx + 8;
+        int gstart = request.indexOf(",", rstart) + 1;
+        if (gstart > rstart)
         {
-          // RGB OK, output
-          int r = request.substring(rstart, gstart - 1).toInt();
-          int g = request.substring(gstart, bstart - 1).toInt();
-          int b = request.substring(bstart).toInt();
-          analogWrite(LED_R, r);
-          analogWrite(LED_G, g);
-          analogWrite(LED_B, b);
-          // Test
-          analogWrite(ledPin, 1023 - r);
-          Serial.printf("r=%i g=%i b=%i\n", r, g, b);
+          int bstart = request.indexOf(",", gstart) + 1;
+          if (bstart > gstart)
+          {
+            // RGB OK, output
+            int r = request.substring(rstart, gstart - 1).toInt();
+            int g = request.substring(gstart, bstart - 1).toInt();
+            int b = request.substring(bstart).toInt();
+            analogWrite(LED_R, r);
+            analogWrite(LED_G, g);
+            analogWrite(LED_B, b);
+            // Test
+            analogWrite(ledPin, 1023 - r);
+            Serial.printf("r=%i g=%i b=%i\n", r, g, b);
+          }
         }
       }
     }
@@ -206,7 +210,10 @@ void loop()
   }
   else
   {
-    client.println("<html>OK</html>");
+    client.print("<html>Request: [");
+    client.print(request);
+    client.println("]</html>");
+    //  client.println("<html>OK</html>");
   }
 
   delay(1);

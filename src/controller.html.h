@@ -38,7 +38,7 @@ const char *controller_html =
 "}\n"
 "\n"
 "function updateRGB() {\n"
-"fetch('/RGB=' + rVal + ',' + gVal + ',' + bVal);\n"
+"fetch('/api/set' + rVal + ',' + gVal + ',' + bVal);\n"
 "}\n"
 "</script>\n"
 "</body>\n"
