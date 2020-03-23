@@ -22,6 +22,51 @@ int LED_R = D5;
 int LED_G = D6;
 int LED_B = D7;
 
+class Color {
+  public:
+    int r,g,b;
+
+    Color(): Color(0,0,0) { }
+
+    Color(int r, int g, int b) {
+      Color::r = r;
+      Color::g = g;
+      Color::b = b;
+    }
+};
+
+const float stepFactor = 0.1f;
+Color cFrom, cTo;
+// We interpolate over the max component (max delta or r, g, or b)
+// weighed as Y = 0.299 R + 0.587 G + 0.114 B
+// Interpolation is done when interp != interpTo
+float interpFrom = 0, interpTo = 0, interp = 0;
+
+Color interpColor() {
+  if (interp == interpTo) {
+    return cTo;
+  }
+  else {
+    if (interp == interpFrom) {
+      return cFrom;
+    }
+    else {
+      float span = interpTo - interpFrom;
+      if (span == 0) {
+        return cFrom;
+      }
+      else {
+        float f = (interp - interpFrom) / span;
+        return Color(
+          (int)((cTo.r - cFrom.r) * f + cFrom.r),
+          (int)((cTo.g - cFrom.g) * f + cFrom.g),
+          (int)((cTo.b - cFrom.b) * f + cFrom.b)
+        );
+      }
+    }
+  }
+}
+
 void initOTA()
 {
   ArduinoOTA.setHostname("esp8266LEDString");
@@ -152,6 +197,30 @@ void loop()
 {
   ArduinoOTA.handle();
 
+  // Handle interpolation
+  if (interp != interpTo) {
+    float delta = (interp + 1) * stepFactor;
+    if (interpFrom < interpTo) {
+      interp += delta;
+      if (interp > interpTo)
+        interp = interpTo;  // Stops interpolation
+    }
+    else {
+      interp -= delta;
+      if (interp < interpTo)
+        interp = interpTo;  // Stops interpolation
+    }
+    Color c = interpColor();
+    // Set RGB
+    analogWrite(LED_R, c.r);
+    analogWrite(LED_G, c.g);
+    analogWrite(LED_B, c.b);
+    // Test
+    analogWrite(ledPin, 1023 - c.r);
+    // Change this later
+    delay(20);
+  }
+
   // Check if a client has connected
   WiFiClient client = server.available();
   if (!client)
@@ -215,16 +284,42 @@ void loop()
           int bstart = request.indexOf(",", gstart) + 1;
           if (bstart > gstart)
           {
-            // RGB OK, output
+            // RGB OK, set interpolation
             int r = request.substring(rstart, gstart - 1).toInt();
             int g = request.substring(gstart, bstart - 1).toInt();
             int b = request.substring(bstart).toInt();
-            analogWrite(LED_R, r);
-            analogWrite(LED_G, g);
-            analogWrite(LED_B, b);
-            // Test
-            analogWrite(ledPin, 1023 - r);
-            Serial.printf("r=%i g=%i b=%i\n", r, g, b);
+            cFrom = interpColor();  // Start where you are now
+            cTo = Color(r, g, b);
+            // Find the largest component
+            float dr = abs(cTo.r - cFrom.r);
+            float dg = abs(cTo.g - cFrom.g);
+            float db = abs(cTo.b - cFrom.b);
+            if (dr >= dg) {
+              if (dr >= db) {
+                // Red
+                interpFrom = cFrom.r;
+                interpTo = cTo.r;
+              }
+              else {
+                // Blue
+                interpFrom = cFrom.b;
+                interpTo = cTo.b;
+              }
+            }
+            else {
+              if (dg >= db) {
+                // Green
+                interpFrom = cFrom.g;
+                interpTo = cTo.g;
+              }
+              else {
+                // Blue
+                interpFrom = cFrom.b;
+                interpTo = cTo.b;
+              }
+            }
+            // Start interpolation if cFrom and cTo differ
+            interp = interpFrom;
           }
         }
         client.println("<html>OK</html>");
@@ -240,20 +335,5 @@ void loop()
     client.println("</html>");
   }
 
-  // if (sendIcon)
-  // {
-  //   client.println(controller_html);
-  // }
-  // else
-  // {
-  //   // client.print("<html>Request: [");
-  //   // client.print(request);
-  //   // client.println("]</html>");
-  //    client.println("<html>OK</html>");
-  // }
-
   delay(1);
-
-  Serial.println("Client disconnected");
-  Serial.println("");
 }
