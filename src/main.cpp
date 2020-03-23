@@ -42,6 +42,10 @@ Color cFrom, cTo;
 // Interpolation is done when interp != interpTo
 float interpFrom = 0, interpTo = 0, interp = 0;
 
+// For timing
+unsigned long curTime = 0;
+const int animInterval = 20; // Interval for each step/tick, 1000 / hz, 20ms = 50hz
+
 Color interpColor() {
   if (interp == interpTo) {
     return cTo;
@@ -199,26 +203,33 @@ void loop()
 
   // Handle interpolation
   if (interp != interpTo) {
-    float delta = (interp + 1) * stepFactor;
-    if (interpFrom < interpTo) {
-      interp += delta;
-      if (interp > interpTo)
-        interp = interpTo;  // Stops interpolation
+    unsigned long t = millis();
+    if ((t - curTime) >= animInterval) {
+      curTime += animInterval;
+      // Make sure we do not lag behind
+      if ((t - curTime) >= animInterval) {
+        // Catch up
+        curTime = t;
+      } 
+      float delta = (interp + 1) * stepFactor;
+      if (interpFrom < interpTo) {
+        interp += delta;
+        if (interp > interpTo)
+          interp = interpTo;  // Stops interpolation
+      }
+      else {
+        interp -= delta;
+        if (interp < interpTo)
+          interp = interpTo;  // Stops interpolation
+      }
+      Color c = interpColor();
+      // Set RGB
+      analogWrite(LED_R, c.r);
+      analogWrite(LED_G, c.g);
+      analogWrite(LED_B, c.b);
+      // Test
+      analogWrite(ledPin, 1023 - c.r);
     }
-    else {
-      interp -= delta;
-      if (interp < interpTo)
-        interp = interpTo;  // Stops interpolation
-    }
-    Color c = interpColor();
-    // Set RGB
-    analogWrite(LED_R, c.r);
-    analogWrite(LED_G, c.g);
-    analogWrite(LED_B, c.b);
-    // Test
-    analogWrite(ledPin, 1023 - c.r);
-    // Change this later
-    delay(20);
   }
 
   // Check if a client has connected
