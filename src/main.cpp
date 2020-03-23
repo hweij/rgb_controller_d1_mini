@@ -35,17 +35,23 @@ class Color {
     }
 };
 
+// The step factor determines how much values will be increased at every step.
+// The increment will be equal to interp * stepFactor, so the step will increase
+// as the value increases. This creates an exponential behaviour, which is
+// more logical than linear.
 const float stepFactor = 0.1f;
 Color cFrom, cTo;
-// We interpolate over the max component (max delta or r, g, or b)
-// weighed as Y = 0.299 R + 0.587 G + 0.114 B
+// We interpolate over the max component (max delta of r, g, or b)
 // Interpolation is done when interp != interpTo
 float interpFrom = 0, interpTo = 0, interp = 0;
 
 // For timing
 unsigned long curTime = 0;
-const int animInterval = 20; // Interval for each step/tick, 1000 / hz, 20ms = 50hz
+// Interval for each tick in milliseconds, 20ms = 50hz
+const int animInterval = 20;
 
+// Interpolates the from and two colors, based on the interpolation values.
+// It returns the interpolated color.
 Color interpColor() {
   if (interp == interpTo) {
     return cTo;
@@ -67,6 +73,39 @@ Color interpColor() {
           (int)((cTo.b - cFrom.b) * f + cFrom.b)
         );
       }
+    }
+  }
+}
+
+  // Handle interpolation
+void doInterp() {
+  if (interp != interpTo) {
+    unsigned long t = millis();
+    if ((t - curTime) >= animInterval) {
+      curTime += animInterval;
+      // Make sure we do not lag behind
+      if ((t - curTime) >= animInterval) {
+        // Catch up
+        curTime = t;
+      } 
+      float delta = (interp + 1) * stepFactor;
+      if (interpFrom < interpTo) {
+        interp += delta;
+        if (interp > interpTo)
+          interp = interpTo;  // Stops interpolation
+      }
+      else {
+        interp -= delta;
+        if (interp < interpTo)
+          interp = interpTo;  // Stops interpolation
+      }
+      Color c = interpColor();
+      // Set RGB
+      analogWrite(LED_R, c.r);
+      analogWrite(LED_G, c.g);
+      analogWrite(LED_B, c.b);
+      // Test
+      analogWrite(ledPin, 1023 - c.r);
     }
   }
 }
@@ -142,96 +181,7 @@ void sendImage(WiFiClient client, uint8_t data[], int data_length) {
   // client.println("<!DOCTYPE HTML>");
 }
 
-
-void setup()
-{
-  Serial.begin(115200);
-  delay(10);
-
-  analogWriteFreq(500); // PWM freq for LEDs
-
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
-
-  // LEDs off
-  pinMode(LED_R, OUTPUT);
-  pinMode(LED_G, OUTPUT);
-  pinMode(LED_B, OUTPUT);
-
-  // Connect to WiFi network
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-
-  WiFi.mode(WIFI_STA);
-  WiFi.hostname(hostname);
-  WiFi.config(ipaddress, gateway, subnet);
-  WiFi.begin(ssid, password);
-
-  while (WiFi.waitForConnectResult() != WL_CONNECTED)
-  {
-    Serial.println("Connection Failed! Rebooting...");
-    delay(5000);
-    ESP.restart();
-  }
-
-  //  while (WiFi.status() != WL_CONNECTED) {
-  //    delay(500);
-  //    Serial.print(".");
-  //  }
-
-  initOTA();
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-
-  // Start the server
-  server.begin();
-  Serial.println("Server started");
-
-  // Print the IP address
-  Serial.print("Use this URL : ");
-  Serial.print("http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("/");
-}
-
-void loop()
-{
-  ArduinoOTA.handle();
-
-  // Handle interpolation
-  if (interp != interpTo) {
-    unsigned long t = millis();
-    if ((t - curTime) >= animInterval) {
-      curTime += animInterval;
-      // Make sure we do not lag behind
-      if ((t - curTime) >= animInterval) {
-        // Catch up
-        curTime = t;
-      } 
-      float delta = (interp + 1) * stepFactor;
-      if (interpFrom < interpTo) {
-        interp += delta;
-        if (interp > interpTo)
-          interp = interpTo;  // Stops interpolation
-      }
-      else {
-        interp -= delta;
-        if (interp < interpTo)
-          interp = interpTo;  // Stops interpolation
-      }
-      Color c = interpColor();
-      // Set RGB
-      analogWrite(LED_R, c.r);
-      analogWrite(LED_G, c.g);
-      analogWrite(LED_B, c.b);
-      // Test
-      analogWrite(ledPin, 1023 - c.r);
-    }
-  }
-
+void handleWebRequests() {
   // Check if a client has connected
   WiFiClient client = server.available();
   if (!client)
@@ -347,4 +297,69 @@ void loop()
   }
 
   delay(1);
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  delay(10);
+
+  analogWriteFreq(500); // PWM freq for LEDs
+
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
+  // LEDs off
+  pinMode(LED_R, OUTPUT);
+  pinMode(LED_G, OUTPUT);
+  pinMode(LED_B, OUTPUT);
+
+  // Connect to WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.hostname(hostname);
+  WiFi.config(ipaddress, gateway, subnet);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.waitForConnectResult() != WL_CONNECTED)
+  {
+    Serial.println("Connection Failed! Rebooting...");
+    delay(5000);
+    ESP.restart();
+  }
+
+  //  while (WiFi.status() != WL_CONNECTED) {
+  //    delay(500);
+  //    Serial.print(".");
+  //  }
+
+  initOTA();
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+
+  // Start the server
+  server.begin();
+  Serial.println("Server started");
+
+  // Print the IP address
+  Serial.print("Use this URL : ");
+  Serial.print("http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/");
+}
+
+void loop()
+{
+  ArduinoOTA.handle();
+
+  // Interpolation and output of RGB
+  doInterp();
+
+  // Web requests, set interpolation target
+  handleWebRequests();
 }
