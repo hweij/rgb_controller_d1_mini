@@ -174,10 +174,10 @@ void sendImage(WiFiClient client, uint8_t data[], int data_length) {
   client.println("HTTP/1.1 200 OK");
   client.println("Content-Type: image/x-icon");
   client.print("Content-Length: ");
-  client.println(favicon_data_length);
+  client.println(data_length);
   client.println("Connection: close");
   client.println(""); //  do not forget this one
-  client.write_P((const char *)data, data_length);
+  client.write((const char *)data, data_length);
   // client.println("<!DOCTYPE HTML>");
 }
 
@@ -225,20 +225,18 @@ void handleWebRequests() {
       }
 
       // Favicon
-      if (request.indexOf("/favicon.ico") >= 0) {
-        // TODO
+      if (request.startsWith("/favicon.ico", urlStart)) {
         sendImage(client, favicon_data, favicon_data_length);
       }
 
       // Request for RGB values: /api/set, ex: /api/set0,20,1023
-      int idx = request.indexOf("/api/set");
       // int rval = -1, gval = -1, bval = -1;
-      if (idx != -1)
+      if (request.startsWith("/api/set", urlStart))
       {
         // API call, return plain HTML
         sendHTMLHeader(client);
         // Find boundaries for r, g, b
-        int rstart = idx + 8;
+        int rstart = 8 + urlStart;
         int gstart = request.indexOf(",", rstart) + 1;
         if (gstart > rstart)
         {
@@ -304,13 +302,15 @@ void handleWebRequests() {
 
 void setup()
 {
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
   Serial.begin(115200);
   delay(10);
 
   analogWriteFreq(500); // PWM freq for LEDs
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  digitalWrite(ledPin, HIGH);
 
   // LEDs off
   pinMode(LED_R, OUTPUT);
@@ -335,6 +335,8 @@ void setup()
     ESP.restart();
   }
 
+  // digitalWrite(ledPin, LOW);
+
   //  while (WiFi.status() != WL_CONNECTED) {
   //    delay(500);
   //    Serial.print(".");
@@ -356,6 +358,8 @@ void setup()
   Serial.println("/");
 }
 
+// int toggle = 0;
+
 void loop()
 {
   ArduinoOTA.handle();
@@ -365,4 +369,7 @@ void loop()
 
   // Web requests, set interpolation target
   handleWebRequests();
+
+  // digitalWrite(ledPin, toggle);
+  // toggle = 1 - toggle;
 }
