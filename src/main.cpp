@@ -105,7 +105,7 @@ void doInterp() {
       analogWrite(LED_G, c.g);
       analogWrite(LED_B, c.b);
       // Test
-      analogWrite(ledPin, 1023 - c.r);
+      // analogWrite(ledPin, 1023 - c.r);
     }
   }
 }
@@ -192,7 +192,7 @@ void handleWebRequests() {
   // Wait until the client sends some data
   // Serial.println("new client");
 
-  int timeOut = 100;
+  int timeOut = 500;
   while (!client.available())
   {
     timeOut--;
@@ -208,7 +208,7 @@ void handleWebRequests() {
   {
     // Read the first line of the request
     request = client.readStringUntil('\r');
-    client.flush();
+    // client.flush();
 
     // Match the request
 
@@ -291,9 +291,12 @@ void handleWebRequests() {
 
   if (!handled) {
     sendHTMLHeader(client);
-    client.println("<html>Unknown request:<br/>");
-    client.println(request);
-    client.println("</html>");
+    client.print("<html>Unknown request: [");
+    client.print(request);
+    client.println("]");
+    client.print("Rest of the input: [");
+    client.print(client.readString());
+    client.println("]\n</html>");
   }
 
   delay(1);
