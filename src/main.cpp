@@ -79,7 +79,17 @@ Color interpColor() {
   }
 }
 
-  // Handle interpolation
+void rgbOut(int r, int g, int b) {
+    analogWrite(LED_R, r);
+    analogWrite(LED_G, g);
+    analogWrite(LED_B, b);
+}
+
+void rgbOut(Color c) {
+  rgbOut(c.r, c.g, c.b);
+}
+
+// Handle interpolation
 void doInterp() {
   if (interp != interpTo) {
     unsigned long t = millis();
@@ -103,9 +113,10 @@ void doInterp() {
       }
       Color c = interpColor();
       // Set RGB
-      analogWrite(LED_R, c.r);
-      analogWrite(LED_G, c.g);
-      analogWrite(LED_B, c.b);
+      rgbOut(c);
+      // analogWrite(LED_R, c.r);
+      // analogWrite(LED_G, c.g);
+      // analogWrite(LED_B, c.b);
       // Test
       // analogWrite(ledPin, 1023 - c.r);
     }
@@ -324,17 +335,18 @@ void setup()
   // pinMode(ledPin, OUTPUT);
   // digitalWrite(ledPin, LOW);
 
-  Serial.begin(115200);
-  delay(10);
-
-  analogWriteFreq(500); // PWM freq for LEDs
-
-  // digitalWrite(ledPin, HIGH);
-
   // LEDs off
   pinMode(LED_R, OUTPUT);
   pinMode(LED_G, OUTPUT);
   pinMode(LED_B, OUTPUT);
+
+  // Faint red to indicate the processor has started
+  rgbOut(1, 0, 0);
+
+  Serial.begin(115200);
+  delay(10);
+
+  analogWriteFreq(500); // PWM freq for LEDs
 
   // Connect to WiFi network
   Serial.println();
@@ -375,6 +387,8 @@ void setup()
   Serial.print("http://");
   Serial.print(WiFi.localIP());
   Serial.println("/");
+
+  rgbOut(0, 1, 0);  // Green indicates the server has started
 
   // digitalWrite(ledPin, LOW);
 }

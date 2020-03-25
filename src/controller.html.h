@@ -4,7 +4,7 @@ const char *controller_html =
 "<title>RGB Controller</title>\n"
 "<link rel=\"manifest\" href=\"manifest.json\">\n"
 "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\">\n"
-"<link rel=\"icon\" type=\"image/png\" href=\"pcotf.png\">\n"
+"<link rel=\"icon\" type=\"image/png\" href=\"icon.png\">\n"
 "<meta name=\"mobile-web-app-capable\" content=\"yes\">\n"
 "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n"
 "<style>\n"
