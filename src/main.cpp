@@ -128,16 +128,7 @@ void initOTA()
   ArduinoOTA.setHostname("esp8266LEDString");
 
   ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH)
-    {
-      type = "sketch";
-    }
-    else
-    { // U_SPIFFS
-      type = "filesystem";
-    }
-
+    String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
     // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
     Serial.println("Start updating " + type);
   });
@@ -149,50 +140,53 @@ void initOTA()
   });
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR)
-    {
-      Serial.println("Auth Failed");
+    const char *msg;
+    switch (error) {
+      case OTA_AUTH_ERROR:
+        msg = "Auth Failed";
+        break;
+      case OTA_BEGIN_ERROR:
+        msg = "Begin Failed";
+        break;
+      case OTA_CONNECT_ERROR:
+        msg = "Connect Failed";
+        break;
+      case OTA_RECEIVE_ERROR:
+        msg = "Receive Failed";
+        break;
+      case OTA_END_ERROR:
+        msg = "End Failed";
+        break;
+      default:
+        msg = "Unknown error";
+        break;
     }
-    else if (error == OTA_BEGIN_ERROR)
-    {
-      Serial.println("Begin Failed");
-    }
-    else if (error == OTA_CONNECT_ERROR)
-    {
-      Serial.println("Connect Failed");
-    }
-    else if (error == OTA_RECEIVE_ERROR)
-    {
-      Serial.println("Receive Failed");
-    }
-    else if (error == OTA_END_ERROR)
-    {
-      Serial.println("End Failed");
-    }
+    Serial.println(msg);
   });
   ArduinoOTA.begin();
 }
 
-void sendHeader(WiFiClient client, const char *mime) {
-  // Return the response
+void writeHeader200_OK(WiFiClient client, const char *mime) {
+// Return the response
   client.println("HTTP/1.1 200 OK");
   client.print("Content-Type: ");
   client.println(mime);
   client.println("Connection: close");
-  client.println(""); //  do not forget this one
+}
+
+void sendHeader(WiFiClient client, const char *mime) {
+  // Return the response
+  writeHeader200_OK(client, mime);
+  client.println("");
 }
 
 void sendData(WiFiClient client, const char *mime, uint8_t data[], int data_length) {
   // Return the response
-  client.println("HTTP/1.1 200 OK");
-  client.print("Content-Type: ");
-  client.println(mime);
+  writeHeader200_OK(client, mime);
   client.print("Content-Length: ");
   client.println(data_length);
-  client.println("Connection: close");
-  client.println(""); //  do not forget this one
+  client.println("");
   client.write((const char *)data, data_length);
-  // client.println("<!DOCTYPE HTML>");
 }
 
 void handleWebRequests() {
@@ -232,7 +226,7 @@ void handleWebRequests() {
       // Main page: controller
       if (request.startsWith("/ ", urlStart))
       {
-        // *** Root: display the page
+        // *** Root: display the application
         sendHeader(client, "text/html");
         client.println("<!DOCTYPE HTML>");
         client.println(controller_html);
@@ -261,9 +255,8 @@ void handleWebRequests() {
       // int rval = -1, gval = -1, bval = -1;
       if (request.startsWith("/api/set", urlStart))
       {
-        // API call, return plain HTML
-        sendHeader(client, "text/html");
-        client.println("<!DOCTYPE HTML>");
+                // API call, return json result
+        sendHeader(client, "application/json");
         // Find boundaries for r, g, b
         int rstart = 8 + urlStart;
         int gstart = request.indexOf(",", rstart) + 1;
@@ -308,10 +301,15 @@ void handleWebRequests() {
             }
             // Start interpolation if cFrom and cTo differ
             interp = interpFrom;
+
+            client.printf("{ \"result\":\"OK\", \"r\":%d, \"g\":%d, \"b\":%d }", cTo.r, cTo.g, cTo.b);
+            handled = true;
           }
         }
-        client.println("<html>OK</html>");
-        handled = true;
+        if (!handled) {
+          client.print("{ \"result\":\"ERROR\", \"detail\":\"Invalid set command\" }");
+          handled = true;
+        }
       }
     }
   }
@@ -340,13 +338,13 @@ void setup()
   pinMode(LED_G, OUTPUT);
   pinMode(LED_B, OUTPUT);
 
+  analogWriteFreq(500); // PWM freq for LEDs
+
   // Faint red to indicate the processor has started
   rgbOut(1, 0, 0);
 
   Serial.begin(115200);
   delay(10);
-
-  analogWriteFreq(500); // PWM freq for LEDs
 
   // Connect to WiFi network
   Serial.println();
