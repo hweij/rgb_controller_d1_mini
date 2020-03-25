@@ -111,26 +111,18 @@ void doInterp() {
         if (interp < interpTo)
           interp = interpTo;  // Stops interpolation
       }
-      Color c = interpColor();
-      // Set RGB
-      rgbOut(c);
-      // analogWrite(LED_R, c.r);
-      // analogWrite(LED_G, c.g);
-      // analogWrite(LED_B, c.b);
-      // Test
-      // analogWrite(ledPin, 1023 - c.r);
+      rgbOut(interpColor());
     }
   }
 }
 
 void initOTA()
 {
-  ArduinoOTA.setHostname("esp8266LEDString");
-
+  // ArduinoOTA.setHostname("esp8266LEDString");
   ArduinoOTA.onStart([]() {
-    String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
     // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    Serial.println("Start updating " + type);
+    Serial.printf("Start updating %s\n",
+      (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem");
   });
   ArduinoOTA.onEnd([]() {
     Serial.println("\nEnd");
@@ -198,7 +190,6 @@ void handleWebRequests() {
   }
 
   // Wait until the client sends some data
-  // Serial.println("new client");
 
   int timeOut = 500;
   while (!client.available())
@@ -211,20 +202,33 @@ void handleWebRequests() {
 
   bool handled = false;
 
-  String request = "";
+  // String request = "";
+  const int REQ_BUFFER_SIZE = 100;
+  uint8_t requestBuffer[REQ_BUFFER_SIZE];
   if (client.available())
   {
     // Read the first line of the request
-    request = client.readStringUntil('\r');
+    // request = client.readStringUntil('\r');
+
+    int b;
+    int index = 0;
+    while (index < (REQ_BUFFER_SIZE - 1)) {
+      b = client.read();
+      if ((b > 0) && (b != '\r')) {
+        requestBuffer[index++] = (uint8_t)b;
+      }
+    }
+    requestBuffer[index] = 0; // Terminating zero
+
     // client.flush();
 
     // Match the request
 
-    if (request.startsWith("GET "))
+    if (strncmp((const char *)requestBuffer, "GET ", 4) == 0)
     {
-      int urlStart = 4;
+      char * url = (char *)requestBuffer + 4;
       // Main page: controller
-      if (request.startsWith("/ ", urlStart))
+      if (strncmp(url, "/ ", 2) == 0)
       {
         // *** Root: display the application
         sendHeader(client, "text/html");
@@ -233,7 +237,7 @@ void handleWebRequests() {
         handled = true;
       }
 
-      if (request.startsWith("/manifest.json", urlStart))
+      if (strncmp(url, "/manifest.json", 14) == 0)
       {
         // *** Server manifest file
         sendHeader(client, "application/json");
@@ -242,33 +246,40 @@ void handleWebRequests() {
       }
 
       // Favicon
-      if (request.startsWith("/favicon.ico", urlStart)) {
+      if (strncmp(url, "/favicon.ico", 12) == 0) {
         sendData(client, "image/x-icon", favicon_data, favicon_data_length);
       }
 
       // Icon
-      if (request.startsWith("/icon.png", urlStart)) {
+      if (strncmp(url, "/icon.png", 9) == 0) {
         sendData(client, "image/png", icon_data, icon_data_length);
       }
 
       // Request for RGB values: /api/set, ex: /api/set0,20,1023
       // int rval = -1, gval = -1, bval = -1;
-      if (request.startsWith("/api/set", urlStart))
+      if (strncmp(url, "/api/set", 8) == 0)
       {
                 // API call, return json result
         sendHeader(client, "application/json");
         // Find boundaries for r, g, b
-        int rstart = 8 + urlStart;
-        int gstart = request.indexOf(",", rstart) + 1;
-        if (gstart > rstart)
+        char *params = url + 8;
+
+        char *rString = params;
+        char *rEnd = strchr(rString, ',');
+        if (rEnd != NULL)
         {
-          int bstart = request.indexOf(",", gstart) + 1;
-          if (bstart > gstart)
+          rEnd[0] = 0;  // Terminate r
+          char *gString = rEnd + 1;
+          char *gEnd = strchr(gString, ',');
+          if (gEnd != NULL)
           {
             // RGB OK, set interpolation
-            int r = request.substring(rstart, gstart - 1).toInt();
-            int g = request.substring(gstart, bstart - 1).toInt();
-            int b = request.substring(bstart).toInt();
+            gEnd[0] = 0;
+            char *bString = gEnd + 1;
+
+            int r = atoi(rString);
+            int g = atoi(gString);
+            int b = atoi(bString);
             cFrom = interpColor();  // Start where you are now
             cTo = Color(r, g, b);
             // Find the largest component
@@ -318,7 +329,7 @@ void handleWebRequests() {
     sendHeader(client, "text/html");
     client.println("<!DOCTYPE HTML>");
     client.print("<html>Unknown request: [");
-    client.print(request);
+    client.print((char *)requestBuffer);
     client.println("]");
     client.print("Rest of the input: [");
     client.print(client.readString());
@@ -363,8 +374,6 @@ void setup()
     delay(5000);
     ESP.restart();
   }
-
-  // digitalWrite(ledPin, LOW);
 
   //  while (WiFi.status() != WL_CONNECTED) {
   //    delay(500);
