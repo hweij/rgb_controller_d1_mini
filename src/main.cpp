@@ -4,7 +4,9 @@
 #include <ArduinoOTA.h>
 
 #include "controller.html.h"
+#include "manifest.json.h"
 #include "favicon.ico.h"
+#include "icon.png.h"
 
 const char *ssid = "TMNL-818E4D";
 const char *password = "DSC8ZLKGLKYFT7";
@@ -160,19 +162,20 @@ void initOTA()
   ArduinoOTA.begin();
 }
 
-void sendHTMLHeader(WiFiClient client) {
+void sendHeader(WiFiClient client, const char *mime) {
   // Return the response
   client.println("HTTP/1.1 200 OK");
-  client.println("Content-Type: text/html");
+  client.print("Content-Type: ");
+  client.println(mime);
   client.println("Connection: close");
   client.println(""); //  do not forget this one
-  client.println("<!DOCTYPE HTML>");
 }
 
-void sendImage(WiFiClient client, uint8_t data[], int data_length) {
+void sendData(WiFiClient client, const char *mime, uint8_t data[], int data_length) {
   // Return the response
   client.println("HTTP/1.1 200 OK");
-  client.println("Content-Type: image/x-icon");
+  client.print("Content-Type: ");
+  client.println(mime);
   client.print("Content-Length: ");
   client.println(data_length);
   client.println("Connection: close");
@@ -219,14 +222,28 @@ void handleWebRequests() {
       if (request.startsWith("/ ", urlStart))
       {
         // *** Root: display the page
-        sendHTMLHeader(client);
+        sendHeader(client, "text/html");
+        client.println("<!DOCTYPE HTML>");
         client.println(controller_html);
+        handled = true;
+      }
+
+      if (request.startsWith("/manifest.json", urlStart))
+      {
+        // *** Server manifest file
+        sendHeader(client, "application/json");
+        client.println(manifest_html);
         handled = true;
       }
 
       // Favicon
       if (request.startsWith("/favicon.ico", urlStart)) {
-        sendImage(client, favicon_data, favicon_data_length);
+        sendData(client, "image/x-icon", favicon_data, favicon_data_length);
+      }
+
+      // Icon
+      if (request.startsWith("/icon.png", urlStart)) {
+        sendData(client, "image/png", icon_data, icon_data_length);
       }
 
       // Request for RGB values: /api/set, ex: /api/set0,20,1023
@@ -234,7 +251,8 @@ void handleWebRequests() {
       if (request.startsWith("/api/set", urlStart))
       {
         // API call, return plain HTML
-        sendHTMLHeader(client);
+        sendHeader(client, "text/html");
+        client.println("<!DOCTYPE HTML>");
         // Find boundaries for r, g, b
         int rstart = 8 + urlStart;
         int gstart = request.indexOf(",", rstart) + 1;
@@ -288,7 +306,8 @@ void handleWebRequests() {
   }
 
   if (!handled) {
-    sendHTMLHeader(client);
+    sendHeader(client, "text/html");
+    client.println("<!DOCTYPE HTML>");
     client.print("<html>Unknown request: [");
     client.print(request);
     client.println("]");
@@ -297,20 +316,20 @@ void handleWebRequests() {
     client.println("]\n</html>");
   }
 
-  delay(1);
+  // delay(1);
 }
 
 void setup()
 {
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  // pinMode(ledPin, OUTPUT);
+  // digitalWrite(ledPin, LOW);
 
   Serial.begin(115200);
   delay(10);
 
   analogWriteFreq(500); // PWM freq for LEDs
 
-  digitalWrite(ledPin, HIGH);
+  // digitalWrite(ledPin, HIGH);
 
   // LEDs off
   pinMode(LED_R, OUTPUT);
@@ -356,6 +375,8 @@ void setup()
   Serial.print("http://");
   Serial.print(WiFi.localIP());
   Serial.println("/");
+
+  // digitalWrite(ledPin, LOW);
 }
 
 // int toggle = 0;

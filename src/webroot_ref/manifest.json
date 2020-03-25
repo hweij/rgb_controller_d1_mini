@@ -1,0 +1,16 @@
+{
+    "manifest_version": 2,
+    "version": "1",
+    "short_name": "RGBC",
+    "name": "RGB Controller",
+    "icons": [
+      {
+        "src": "icon.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      }
+    ],
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait"
+}
