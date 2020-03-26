@@ -1,8 +1,8 @@
 #include <Arduino.h>
-
 #include <ESP8266WiFi.h>
 #include <ArduinoOTA.h>
 
+// The following headers have been generated from the html, json and image sources
 #include "controller.html.h"
 #include "manifest.json.h"
 #include "favicon.ico.h"
@@ -19,13 +19,13 @@
 const uint8_t addr[]{192, 168, 1, 99};
 // Specify your network mask
 IPAddress subnet(255, 255, 255, 0);
+// Gateway, presumed to be at xx.xx.xx.1 Change this if required
+IPAddress gateway(addr[0], addr[1], addr[2], 1);
 // ***** END OF CONFIGURATION *****
 
-const char *hostname = "rgbcontroller";
 IPAddress ipaddress(addr[0], addr[1], addr[2], addr[3]);
-IPAddress gateway(addr[0], addr[1], addr[2], 1);
+const char *hostname = "rgbcontroller";
 
-int ledPin = LED_BUILTIN;
 WiFiServer server(80);
 
 int LED_R = D5;
@@ -343,9 +343,6 @@ void handleWebRequests() {
 
 void setup()
 {
-  // pinMode(ledPin, OUTPUT);
-  // digitalWrite(ledPin, LOW);
-
   // LEDs off
   pinMode(LED_R, OUTPUT);
   pinMode(LED_G, OUTPUT);
@@ -397,12 +394,9 @@ void setup()
   Serial.print(WiFi.localIP());
   Serial.println("/");
 
-  rgbOut(0, 1, 0);  // Green indicates the server has started
-
-  // digitalWrite(ledPin, LOW);
+  // Faint green to indicate the server has started
+  rgbOut(0, 1, 0);
 }
-
-// int toggle = 0;
 
 void loop()
 {
@@ -413,7 +407,4 @@ void loop()
 
   // Web requests, set interpolation target
   handleWebRequests();
-
-  // digitalWrite(ledPin, toggle);
-  // toggle = 1 - toggle;
 }
