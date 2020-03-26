@@ -8,14 +8,22 @@
 #include "favicon.ico.h"
 #include "icon.png.h"
 
-const char *ssid = "TMNL-818E4D";
-const char *password = "DSC8ZLKGLKYFT7";
-const char *hostname = "rgbcontroller";
+// ***** START OF CONFIGURATION *****
+// Network name and password are specified in a separate file that you need to add yourself.
+// In this file, put the following two lines and specify your pwd and ssid:
+// const char *ssid = "your-ssid";
+// const char *password = "your-pwd";
+#include "access.h"
+//
+// Assign an IP-address to your device that is in the local network range.
 const uint8_t addr[]{192, 168, 1, 99};
+// Specify your network mask
+IPAddress subnet(255, 255, 255, 0);
+// ***** END OF CONFIGURATION *****
 
+const char *hostname = "rgbcontroller";
 IPAddress ipaddress(addr[0], addr[1], addr[2], addr[3]);
 IPAddress gateway(addr[0], addr[1], addr[2], 1);
-IPAddress subnet(255, 255, 255, 0);
 
 int ledPin = LED_BUILTIN;
 WiFiServer server(80);
@@ -207,13 +215,9 @@ void handleWebRequests() {
   uint8_t requestBuffer[REQ_BUFFER_SIZE];
   if (client.available())
   {
-    // Read the first line of the request
-    // request = client.readStringUntil('\r');
-
-    int b;
     int index = 0;
     while (index < (REQ_BUFFER_SIZE - 1)) {
-      b = client.read();
+      int b = client.read();
       if ((b > 0) && (b != '\r')) {
         requestBuffer[index++] = (uint8_t)b;
       }
@@ -268,13 +272,11 @@ void handleWebRequests() {
         char *rEnd = strchr(rString, ',');
         if (rEnd != NULL)
         {
-          rEnd[0] = 0;  // Terminate r
           char *gString = rEnd + 1;
           char *gEnd = strchr(gString, ',');
           if (gEnd != NULL)
           {
             // RGB OK, set interpolation
-            gEnd[0] = 0;
             char *bString = gEnd + 1;
 
             int r = atoi(rString);
