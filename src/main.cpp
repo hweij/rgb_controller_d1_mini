@@ -16,7 +16,7 @@
 #include "access.h"
 //
 // Assign an IP-address to your device that is in the local network range.
-const uint8_t addr[]{192, 168, 1, 99};
+const uint8_t addr[]{192, 168, 1, 98};
 // Specify your network mask
 IPAddress subnet(255, 255, 255, 0);
 // Gateway, presumed to be at xx.xx.xx.1 Change this if required
@@ -59,6 +59,87 @@ float interpFrom = 0, interpTo = 0, interp = 0;
 unsigned long curTime = 0;
 // Interval for each tick in milliseconds, 20ms = 50hz
 const int animInterval = 20;
+
+void spifInit() {
+Serial.println(F("Inizializing FS..."));
+    if (SPIFFS.begin()){
+        Serial.println(F("done."));
+    }else{
+        Serial.println(F("fail."));
+    }
+ 
+    // To format all space in SPIFFS
+    // SPIFFS.format()
+ 
+    // Get all information of your SPIFFS
+    FSInfo fs_info;
+    SPIFFS.info(fs_info);
+ 
+    Serial.println("File sistem info.");
+ 
+    Serial.print("Total space:      ");
+    Serial.print(fs_info.totalBytes);
+    Serial.println("byte");
+ 
+    Serial.print("Total space used: ");
+    Serial.print(fs_info.usedBytes);
+    Serial.println("byte");
+ 
+    Serial.print("Block size:       ");
+    Serial.print(fs_info.blockSize);
+    Serial.println("byte");
+ 
+    Serial.print("Page size:        ");
+    Serial.print(fs_info.totalBytes);
+    Serial.println("byte");
+ 
+    Serial.print("Max open files:   ");
+    Serial.println(fs_info.maxOpenFiles);
+ 
+    Serial.print("Max path lentgh:  ");
+    Serial.println(fs_info.maxPathLength);
+ 
+    Serial.println();
+}
+
+void spifTest()
+{
+    // Open dir folder
+    Dir dir = SPIFFS.openDir("/");
+    // Cycle all the content
+    while (dir.next()) {
+        // get filename
+        Serial.print(dir.fileName());
+        Serial.print(" - ");
+        // If element have a size display It else write 0
+        if(dir.fileSize()) {
+            File f = dir.openFile("r");
+            Serial.println(f.size());
+            f.close();
+        }else{
+            Serial.println("0");
+        }
+    }
+}
+
+void spifSend(WiFiClient &client, const char *fname) {
+  File f = SPIFFS.open(fname, "r");
+  if (!f) {
+    Serial.println("file open failed");
+  }
+  else {
+    const int BUFSIZE = 1024;
+    char buffer[BUFSIZE];
+    int n = f.readBytes(buffer, BUFSIZE);
+    while (n > 0) {
+      client.write(buffer, n);
+      n = f.readBytes(buffer, BUFSIZE);
+    }
+    f.close();
+  }
+}
+
+
 
 // Interpolates the from and two colors, based on the interpolation values.
 // It returns the interpolated color.
@@ -237,7 +318,8 @@ void handleWebRequests() {
         // *** Root: display the application
         sendHeader(client, "text/html");
         client.println("<!DOCTYPE HTML>");
-        client.println(controller_html);
+        spifSend(client, "/controller.html");
+        // client.println(controller_html);
         handled = true;
       }
 
@@ -355,6 +437,10 @@ void setup()
 
   Serial.begin(115200);
   delay(10);
+
+  // File system
+  spifInit();
+  spifTest();
 
   // Connect to WiFi network
   Serial.println();
