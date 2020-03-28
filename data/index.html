@@ -21,7 +21,34 @@
             <input type='range' min='0' max='1023' id='bSlider' value='0'>
         </div>
 
+        <div style="display: grid; grid-template-columns: 33% 33% 33%; width: 99%;">
+            <div id="divRed">red</div>
+            <div id="divGreen">green</div>
+            <div id="divBlue">blue</div>
+        </div>
+
+        <div>
+            Presets
+        </div>
+
+        <div style="display: grid; grid-template-columns: 33% 33% 33%; width: 100%;">
+            <button>Soft red</button>
+            <button>Soft green</button>
+            <button>Evening</button>
+            <button>Soft red</button>
+            <button>Soft red</button>
+            <button>Soft red</button>
+            <button>Soft red</button>
+            <button>Soft red</button>
+            <button>Soft red</button>
+            <button>Soft red</button>
+        </div>
+
         <script>
+            function EL(id) {
+                return document.getElementById(id);
+            }
+
             var rVal = 0;
             var gVal = 0;
             var bVal = 0;
@@ -41,8 +68,14 @@
                 updateRGB();
             }
 
-            function updateRGB() {
-                fetch('/api/set' + rVal + ',' + gVal + ',' + bVal);
+            async function updateRGB() {
+                var resp = await fetch('/api/set' + rVal + ',' + gVal + ',' + bVal);
+                var jso = await resp.json();
+                if (jso) {
+                    EL("divRed").innerHTML = jso.r;
+                    EL("divGreen").innerHTML = jso.g;
+                    EL("divBlue").innerHTML = jso.b;
+                }
             }
         </script>
     </body>

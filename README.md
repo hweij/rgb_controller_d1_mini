@@ -2,7 +2,7 @@
 
 This software allows you to set up a remotely controlled RGB-strip using a (Wemos) D1 Mini based on the ESP8266.
 
-This project was created using platformio. Furthermore, node has been installed for running a local server to simulate and test the behavior of the device.
+This project was created using Platformio with Visual Studio Code. Furthermore, node has been installed for running a local web server to simulate and test the behavior of the device.
 
 To upload the code, follow these steps:
 

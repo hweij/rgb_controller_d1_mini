@@ -36,7 +36,6 @@ function serveStatic(res, url) {
     if (fs.existsSync(fpath)) {
         // Deduct mime type from extension
         const ext = path.extname(url);
-        console.log("Extension = " + ext);
         var mime = "text/plain";
         switch (ext) {
             case ".html":
