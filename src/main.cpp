@@ -2,12 +2,6 @@
 #include <ESP8266WiFi.h>
 #include <ArduinoOTA.h>
 
-// The following headers have been generated from the html, json and image sources
-#include "controller.html.h"
-#include "manifest.json.h"
-#include "favicon.ico.h"
-#include "icon.png.h"
-
 // ***** START OF CONFIGURATION *****
 // Network name and password are specified in a separate file that you need to add yourself.
 // In this file, put the following two lines and specify your pwd and ssid:
@@ -122,24 +116,26 @@ void spifTest()
     }
 }
 
+void spifSend(WiFiClient &client, File &f) {
+  const int BUFSIZE = 1024;
+  char buffer[BUFSIZE];
+  int n = f.readBytes(buffer, BUFSIZE);
+  while (n > 0) {
+    client.write(buffer, n);
+    n = f.readBytes(buffer, BUFSIZE);
+  }
+}
+
 void spifSend(WiFiClient &client, const char *fname) {
   File f = SPIFFS.open(fname, "r");
   if (!f) {
     Serial.println("file open failed");
   }
   else {
-    const int BUFSIZE = 1024;
-    char buffer[BUFSIZE];
-    int n = f.readBytes(buffer, BUFSIZE);
-    while (n > 0) {
-      client.write(buffer, n);
-      n = f.readBytes(buffer, BUFSIZE);
-    }
+    spifSend(client, f);
     f.close();
   }
 }
-
-
 
 // Interpolates the from and two colors, based on the interpolation values.
 // It returns the interpolated color.
@@ -188,7 +184,7 @@ void doInterp() {
       if ((t - curTime) >= animInterval) {
         // Catch up
         curTime = t;
-      } 
+      }
       float delta = (interp + 1) * stepFactor;
       if (interpFrom < interpTo) {
         interp += delta;
@@ -270,6 +266,25 @@ void sendData(WiFiClient client, const char *mime, uint8_t data[], int data_leng
   client.write((const char *)data, data_length);
 }
 
+void sendData(WiFiClient client, const char *mime, const char *fname) {
+  File f = SPIFFS.open(fname, "r");
+  if (f) {
+    int fsize = f.size();
+    // Return the response
+    writeHeader200_OK(client, mime);
+    client.print("Content-Length: ");
+    client.println(fsize);
+    client.println("");
+    spifSend(client, f);
+    f.close();
+  }
+  else {
+    // Return the response, change this
+    writeHeader200_OK(client, mime);
+    client.println("");
+  }
+}
+
 void handleWebRequests() {
   // Check if a client has connected
   WiFiClient client = server.available();
@@ -317,9 +332,7 @@ void handleWebRequests() {
       {
         // *** Root: display the application
         sendHeader(client, "text/html");
-        client.println("<!DOCTYPE HTML>");
         spifSend(client, "/controller.html");
-        // client.println(controller_html);
         handled = true;
       }
 
@@ -327,25 +340,25 @@ void handleWebRequests() {
       {
         // *** Server manifest file
         sendHeader(client, "application/json");
-        client.println(manifest_html);
+        spifSend(client, "/manifest.json");
         handled = true;
       }
 
       // Favicon
       if (strncmp(url, "/favicon.ico", 12) == 0) {
-        sendData(client, "image/x-icon", favicon_data, favicon_data_length);
+        sendData(client, "image/x-icon", "/favicon.ico");
       }
 
       // Icon
       if (strncmp(url, "/icon.png", 9) == 0) {
-        sendData(client, "image/png", icon_data, icon_data_length);
+        sendData(client, "image/png", "/icon.png");
       }
 
       // Request for RGB values: /api/set, ex: /api/set0,20,1023
       // int rval = -1, gval = -1, bval = -1;
       if (strncmp(url, "/api/set", 8) == 0)
       {
-                // API call, return json result
+        // API call, return json result
         sendHeader(client, "application/json");
         // Find boundaries for r, g, b
         char *params = url + 8;
