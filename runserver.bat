@@ -1,1 +1,2 @@
-http-server ./data
+REM http-server ./data
+node server.js

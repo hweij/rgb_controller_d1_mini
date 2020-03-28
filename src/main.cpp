@@ -332,7 +332,7 @@ void handleWebRequests() {
       {
         // *** Root: display the application
         sendHeader(client, "text/html");
-        spifSend(client, "/controller.html");
+        spifSend(client, "/index.html");
         handled = true;
       }
 

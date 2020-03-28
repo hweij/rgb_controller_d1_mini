@@ -2,10 +2,31 @@
 
 This software allows you to set up a remotely controlled RGB-strip using a (Wemos) D1 Mini based on the ESP8266.
 
-To configure the code for your use, fill in the correct data in the code:
-- SSID: the name of your WiFi network
-- Password: your password to access the network
-- IP-address: the address assigned to the controller.
+This project was created using platformio. Furthermore, node has been installed for running a local server to simulate and test the behavior of the device.
+
+To upload the code, follow these steps:
+
+### 1. Configure the network:
+
+Create file "access.h" in the src folder and fill in your SSID and matching password:
+> const char *ssid = "*your SSID*";\
+> const char *password = "*your password*";
+
+In file main.cpp, specify the IP-address: the 4 bytes of the (static) IP-address to be assigned to the controller:
+
+> const uint8_t addr[]{ *a1, a2, a3, a4* };
+
+Example (match with your local network):
+> const uint8_t addr[]{ *192, 168, 1, 99* };
+
+### 2. Upload data:
+Choose "Upload File System image" from the platformio project tasks. This will upload the disk image in the /data folder that contains the static files to be served.
+
+### 3. Upload the program.
+
+The device should be accessible at the configured IP-address. The device indicates its state using the connected LEDs:
+- Faint red: the processor has started
+- Faint green: the server is running
 
 Note: we do not use DHCP, so we can guarantee the IP-address will not change. The IP-address chosen must be valid for your network, and it should not overlap with DHCP-assigned addresses. Alternatively, you can configure your router to assign a specfic IP-address to your controller. In that case, you can comment out the assignment of the static IP.
 
