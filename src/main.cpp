@@ -2,6 +2,11 @@
 #include <ESP8266WiFi.h>
 #include <ArduinoOTA.h>
 
+// Console (Serial input) reader
+#include "console.h"
+
+Console console;
+
 // ***** START OF CONFIGURATION *****
 // Network name and password are specified in a separate file that you need to add yourself.
 // In this file, put the following two lines and specify your pwd and ssid:
@@ -69,34 +74,34 @@ Serial.println(F("Inizializing FS..."));
     FSInfo fs_info;
     SPIFFS.info(fs_info);
  
-    Serial.println("File sistem info.");
+    Serial.println(F("File sistem info."));
  
-    Serial.print("Total space:      ");
+    Serial.print(F("Total space:      "));
     Serial.print(fs_info.totalBytes);
-    Serial.println("byte");
+    Serial.println(F("byte"));
  
-    Serial.print("Total space used: ");
+    Serial.print(F("Total space used: "));
     Serial.print(fs_info.usedBytes);
-    Serial.println("byte");
+    Serial.println(F("byte"));
  
-    Serial.print("Block size:       ");
+    Serial.print(F("Block size:       "));
     Serial.print(fs_info.blockSize);
-    Serial.println("byte");
+    Serial.println(F("byte"));
  
-    Serial.print("Page size:        ");
+    Serial.print(F("Page size:        "));
     Serial.print(fs_info.totalBytes);
-    Serial.println("byte");
+    Serial.println(F("byte"));
  
-    Serial.print("Max open files:   ");
+    Serial.print(F("Max open files:   "));
     Serial.println(fs_info.maxOpenFiles);
  
-    Serial.print("Max path lentgh:  ");
+    Serial.print(F("Max path lentgh:  "));
     Serial.println(fs_info.maxPathLength);
  
     Serial.println();
 }
 
-void spifTest()
+void spifInfo()
 {
     // Open dir folder
     Dir dir = SPIFFS.openDir("/");
@@ -453,7 +458,7 @@ void setup()
 
   // File system
   spifInit();
-  spifTest();
+  spifInfo();
 
   // Connect to WiFi network
   Serial.println();
@@ -506,4 +511,10 @@ void loop()
 
   // Web requests, set interpolation target
   handleWebRequests();
+
+  const char *command = console.readCommand();
+  if (command) {
+    Serial.print(F("Command: "));
+    Serial.println(command);
+  }
 }
