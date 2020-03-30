@@ -262,26 +262,29 @@ void sendHeader(WiFiClient client, const char *mime) {
   client.println("");
 }
 
-void sendData(WiFiClient client, const char *mime, uint8_t data[], int data_length) {
-  // Return the response
-  writeHeader200_OK(client, mime);
-  client.print("Content-Length: ");
-  client.println(data_length);
-  client.println("");
-  client.write((const char *)data, data_length);
-}
+// void sendData(WiFiClient client, const char *mime, uint8_t data[], int data_length) {
+//   // Return the response
+//   writeHeader200_OK(client, mime);
+//   client.print("Content-Length: ");
+//   client.println(data_length);
+//   client.println("");
+//   client.write((const char *)data, data_length);
+// }
 
 void sendData(WiFiClient client, const char *mime, const char *fname) {
   File f = SPIFFS.open(fname, "r");
   if (f) {
-    int fsize = f.size();
+    // int fsize = f.size();
     // Return the response
     writeHeader200_OK(client, mime);
-    client.print("Content-Length: ");
-    client.println(fsize);
+    // client.print("Content-Length: ");
+    // client.println(fsize);
     client.println("");
     spifSend(client, f);
     f.close();
+    // client.flush();
+    // delay(1);
+    // client.stop();
   }
   else {
     // Return the response, change this
@@ -352,11 +355,13 @@ void handleWebRequests() {
       // Favicon
       if (strncmp(url, "/favicon.ico", 12) == 0) {
         sendData(client, "image/x-icon", "/favicon.ico");
+        handled = true;
       }
 
       // Icon
       if (strncmp(url, "/icon.png", 9) == 0) {
         sendData(client, "image/png", "/icon.png");
+        handled = true;
       }
 
       // Request for RGB values: /api/set, ex: /api/set0,20,1023
