@@ -2,6 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <ArduinoOTA.h>
 
+#include "util.h"
 // Console (Serial input) reader
 #include "console.h"
 
@@ -282,16 +283,6 @@ void sendData(WiFiClient client, const char *mime, const char *fname) {
     writeHeader200_OK(client, mime);
     client.println("");
   }
-}
-
-bool startsWith(const char *s, const char *pattern) {
-  int index = 0;
-  while (pattern[index] != 0) {
-    if (s[index] != pattern[index])
-      break;
-    index++;
-  }
-  return (pattern[index] == 0);
 }
 
 void handleWebRequests() {

@@ -12,4 +12,5 @@ class Console {
         // If the internal buffer overflows, a text signalling this is returned.
         // The data rturned are owned by this class, do not modify it.
         const char *readLine();
+        void configNetwork(const char *line);
 };
