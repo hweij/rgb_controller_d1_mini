@@ -262,15 +262,6 @@ void sendHeader(WiFiClient client, const char *mime) {
   client.println("");
 }
 
-// void sendData(WiFiClient client, const char *mime, uint8_t data[], int data_length) {
-//   // Return the response
-//   writeHeader200_OK(client, mime);
-//   client.print("Content-Length: ");
-//   client.println(data_length);
-//   client.println("");
-//   client.write((const char *)data, data_length);
-// }
-
 void sendData(WiFiClient client, const char *mime, const char *fname) {
   File f = SPIFFS.open(fname, "r");
   if (f) {
@@ -291,6 +282,16 @@ void sendData(WiFiClient client, const char *mime, const char *fname) {
     writeHeader200_OK(client, mime);
     client.println("");
   }
+}
+
+bool startsWith(const char *s, const char *pattern) {
+  int index = 0;
+  while (pattern[index] != 0) {
+    if (s[index] != pattern[index])
+      break;
+    index++;
+  }
+  return (pattern[index] == 0);
 }
 
 void handleWebRequests() {
@@ -328,15 +329,13 @@ void handleWebRequests() {
     }
     requestBuffer[index] = 0; // Terminating zero
 
-    // client.flush();
-
     // Match the request
 
-    if (strncmp((const char *)requestBuffer, "GET ", 4) == 0)
+    if (startsWith((const char *)requestBuffer, "GET "))
     {
       char * url = (char *)requestBuffer + 4;
       // Main page: controller
-      if (strncmp(url, "/ ", 2) == 0)
+      if (startsWith(url, "/ "))
       {
         // *** Root: display the application
         sendHeader(client, "text/html");
@@ -344,7 +343,7 @@ void handleWebRequests() {
         handled = true;
       }
 
-      if (strncmp(url, "/manifest.json", 14) == 0)
+      if (startsWith(url, "/manifest.json"))
       {
         // *** Server manifest file
         sendHeader(client, "application/json");
@@ -353,20 +352,20 @@ void handleWebRequests() {
       }
 
       // Favicon
-      if (strncmp(url, "/favicon.ico", 12) == 0) {
+      if (startsWith(url, "/favicon.ico")) {
         sendData(client, "image/x-icon", "/favicon.ico");
         handled = true;
       }
 
       // Icon
-      if (strncmp(url, "/icon.png", 9) == 0) {
+      if (startsWith(url, "/icon.png")) {
         sendData(client, "image/png", "/icon.png");
         handled = true;
       }
 
       // Request for RGB values: /api/set, ex: /api/set0,20,1023
       // int rval = -1, gval = -1, bval = -1;
-      if (strncmp(url, "/api/set", 8) == 0)
+      if (startsWith(url, "/api/set"))
       {
         // API call, return json result
         sendHeader(client, "application/json");
