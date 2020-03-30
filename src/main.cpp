@@ -516,9 +516,11 @@ void loop()
   // Web requests, set interpolation target
   handleWebRequests();
 
-  const char *command = console.readCommand();
-  if (command) {
-    Serial.print(F("Command: "));
-    Serial.println(command);
-  }
+  bool res = console.readCommand();
+
+  // const char *command = console.readLine();
+  // if (command) {
+  //   Serial.print(F("Command: "));
+  //   Serial.println(command);
+  // }
 }
