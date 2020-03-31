@@ -1,8 +1,10 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ArduinoOTA.h>
+#include <EEPROM.h>
 
 #include "util.h"
+#include "config.h"
 // Console (Serial input) reader
 #include "console.h"
 
@@ -75,7 +77,7 @@ Serial.println(F("Inizializing FS..."));
     FSInfo fs_info;
     SPIFFS.info(fs_info);
  
-    Serial.println(F("File sistem info."));
+    Serial.println(F("File system info."));
  
     Serial.print(F("Total space:      "));
     Serial.print(fs_info.totalBytes);
@@ -141,6 +143,19 @@ void spifSend(WiFiClient &client, const char *fname) {
     spifSend(client, f);
     f.close();
   }
+}
+
+void readConfig() {
+  EEPROM.begin(512);
+  for (int i=0; i<512; i++) {
+    Serial.print(EEPROM.read(i));
+    Serial.print(" ");
+  }
+  // TEST TEST
+  NetworkConfig conf;
+  int numBytes = conf.fromBytes(EEPROM.getConstDataPtr());
+  Serial.print("Config size = ");
+  Serial.println(numBytes);
 }
 
 // Interpolates the from and two colors, based on the interpolation values.
@@ -451,6 +466,9 @@ void setup()
   Serial.begin(115200);
   delay(10);
 
+  // Configuration EEPROM
+  readConfig();
+
   // File system
   spifInit();
   spifInfo();
@@ -495,6 +513,8 @@ void setup()
 
   // Faint green to indicate the server has started
   rgbOut(0, 1, 0);
+
+  console.init();
 }
 
 void loop()
