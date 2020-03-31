@@ -8,22 +8,23 @@ struct NetworkConfig
     int ns1[4];
     int ns2[4];
 
-    private:
-    void readIP(int &index, int array[4], const uint8_t *bytes) {
-        for (int i=0; i<4; i++)
-            array[i] = bytes[index++];
-    }
+private:
+    void readIP(int &index, int array[4], const uint8_t *bytes);
 
-    public:
-    int fromBytes(const uint8_t *bytes) {
-        int res = 0;
-        dhcp = bytes[res++];
-        readIP(res, host, bytes);
-        readIP(res, gateway, bytes);
-        readIP(res, netmask, bytes);
-        readIP(res, ns1, bytes);
-        readIP(res, ns2, bytes);
-        return res;
-    }
+public:
+    int fromBytes(const uint8_t *bytes);
+    void setDefault();
 };
 
+struct Config
+{
+public:
+    const uint32_t MAGIC = 0xF480C317;
+    uint32_t magic;
+    NetworkConfig networkConfig;
+
+    void read();
+    int fromBytes(const uint8_t *bytes);
+
+private:
+};

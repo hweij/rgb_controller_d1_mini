@@ -1,14 +1,15 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ArduinoOTA.h>
-#include <EEPROM.h>
 
 #include "util.h"
 #include "config.h"
 // Console (Serial input) reader
 #include "console.h"
 
-Console console;
+Config config;
+
+Console console(&config);
 
 // ***** START OF CONFIGURATION *****
 // Network name and password are specified in a separate file that you need to add yourself.
@@ -143,19 +144,6 @@ void spifSend(WiFiClient &client, const char *fname) {
     spifSend(client, f);
     f.close();
   }
-}
-
-void readConfig() {
-  EEPROM.begin(512);
-  for (int i=0; i<512; i++) {
-    Serial.print(EEPROM.read(i));
-    Serial.print(" ");
-  }
-  // TEST TEST
-  NetworkConfig conf;
-  int numBytes = conf.fromBytes(EEPROM.getConstDataPtr());
-  Serial.print("Config size = ");
-  Serial.println(numBytes);
 }
 
 // Interpolates the from and two colors, based on the interpolation values.
@@ -467,7 +455,7 @@ void setup()
   delay(10);
 
   // Configuration EEPROM
-  readConfig();
+  config.read();
 
   // File system
   spifInit();

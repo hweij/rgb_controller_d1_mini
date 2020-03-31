@@ -4,8 +4,6 @@
 #include "config.h"
 #include "console.h"
 
-NetworkConfig networkConfig;
-
 // Reads an array of 4 integers from a (well-formatted) IP string.
 // The buffer passed should (at least) have 4 elements
 static bool readIP(const char *ipString, int parts[])
@@ -40,8 +38,9 @@ static const char strConfirmNetwork[] PROGMEM = "Enter Y to confirm, N to cancel
 
 void setState(State s, int sub);
 
-Console::Console()
+Console::Console(Config *config)
 {
+    Console::config = config;
 }
 
 void Console::init() {
@@ -58,6 +57,7 @@ void Console::setState(State s, int sub)
         Serial.println(FPSTR(strEnterCommand));
         break;
     case State::CONFIG_NETWORK:
+        NetworkConfig &netconf = config->networkConfig;
         switch (subState)
         {
         case 0:
@@ -65,7 +65,7 @@ void Console::setState(State s, int sub)
             break;
         case 1:
             Serial.printf("Enter gateway IP (Enter for %d.%d.%d.1)",
-                          networkConfig.host[0], networkConfig.host[1], networkConfig.host[2]);
+                          netconf.host[0], netconf.host[1], netconf.host[2]);
             break;
         case 2:
             Serial.println(FPSTR(strEnterNetmask));
@@ -110,34 +110,35 @@ bool Console::readCommand()
             }
         break;
         case CONFIG_NETWORK:
+            NetworkConfig &netconf = config->networkConfig;
             switch (subState)
             {
             case 0:
                 // Ask for choice: Dhcp or IP address to assign a static IP
                 if (startsWith(command, "D"))
                 {
-                    networkConfig.dhcp = true;
+                    netconf.dhcp = true;
                     // Done
                     setState(INIT, 0);
                 }
                 else
                 {
-                    networkConfig.dhcp = false;
+                    netconf.dhcp = false;
                     // Static
-                    setState(state, readIP(command, networkConfig.host) ? subState + 1 : subState);
+                    setState(state, readIP(command, netconf.host) ? subState + 1 : subState);
                 }
                 break;
             case 1:
-                setState(state, readIP(command, networkConfig.gateway) ? subState + 1 : subState);
+                setState(state, readIP(command, netconf.gateway) ? subState + 1 : subState);
                 break;
             case 2:
-                setState(state, readIP(command, networkConfig.netmask) ? subState + 1 : subState);
+                setState(state, readIP(command, netconf.netmask) ? subState + 1 : subState);
                 break;
             case 3:
-                setState(state, readIP(command, networkConfig.ns1) ? subState + 1 : subState);
+                setState(state, readIP(command, netconf.ns1) ? subState + 1 : subState);
                 break;
             case 4:
-                setState(state, readIP(command, networkConfig.ns2) ? subState + 1 : subState);
+                setState(state, readIP(command, netconf.ns2) ? subState + 1 : subState);
                 break;
             case 5:
                 if (startsWith(command, "Y"))

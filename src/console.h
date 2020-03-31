@@ -8,10 +8,11 @@ enum State
 
 class Console {
     public:
-        Console();
+        Console(Config *config);
         void init();
         bool readCommand();
     private:
+        Config *config;
         char buffer[BUFSIZE];
         int bufferIndex;
         State state;
