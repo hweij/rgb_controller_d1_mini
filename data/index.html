@@ -21,12 +21,14 @@
             <input type='range' min='0' max='1023' id='bSlider' value='0'>
         </div>
 
-        <div style="position: relative; width: 80%; margin-left: 10%;">
-            <canvas id="canvas" width="256" height="256" style="width: 100%;"></canvas>
-            <div style="height: 40px; margin-top: 40px; background: linear-gradient(90deg, #000000, #ffffff)">
+        <div style="display: grid; grid-template-columns: auto; align-items: center; width: 100%;">
+            <div id="divHueSat" style="padding: 40px;">
+                <canvas id="canvas" width="256" height="256" style="width: 100%;"></canvas>
+            </div>
+            <div id="divBrightness" style="margin: 0px 40px; height: 40px; background: linear-gradient(90deg, #000000, #ffffff);">
                 <div style="height: 40px; width: 40px; background-color: red;"></div>
             </div>
-            <div style="margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 40px; grid-gap: 20px; width: 100%;">
+            <div style="margin: 40px; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 40px; gap: 20px;">
                 <button>Soft red</button>
                 <button>Soft green</button>
                 <button>Evening</button>
@@ -43,6 +45,10 @@
             function EL(id) {
                 return document.getElementById(id);
             }
+
+            const divHueSat = EL("divHueSat");
+            const divBrightness = EL("divBrightness");
+            const canvas = /** @type{HTMLCanvasElement} */(EL("canvas"));
 
             var rVal = 0;
             var gVal = 0;
@@ -74,7 +80,6 @@
             }
 
             function updateHueSatCanvas() {
-                const canvas = /** @type{HTMLCanvasElement} */(document.getElementById("canvas"));
                 const w = canvas.width;
                 const rad = Math.floor(w/2);
                 const xmin = rad - w;
@@ -87,51 +92,11 @@
                     for (let x=xmin; x<rad; x++) {
                         const r2 = (x * x) + (y * y);
                         if (r2 <= R2) {
-                            // Within the circle
-                            const a = Math.atan2(y, x);
-                            let hue = (a * 3 / Math.PI) + 3;
-                            if (hue >= 6) {
-                                hue -= 6;
-                            }
-                            let r, g, b;
-                            const phase = Math.floor(hue);
-                            switch (phase) {
-                                case 0:
-                                    r = hue;
-                                    g = 0;
-                                    b = 1;
-                                    break;
-                                case 1:
-                                    r = 1;
-                                    g = 0;
-                                    b = 2 - hue;
-                                    break;
-                                case 2:
-                                    r = 1;
-                                    g = hue - 2;
-                                    b = 0;
-                                    break;
-                                case 3:
-                                    r = 4 - hue;
-                                    g = 1;
-                                    b = 0;
-                                    break;
-                                case 4:
-                                    r = 0;
-                                    g = 1;
-                                    b = hue - 4;
-                                    break;
-                                case 5:
-                                    r = 0;
-                                    g = 6 - hue;
-                                    b = 1;
-                                    break;
-                            }
-                            const d = Math.sqrt(r2) / rad;
-                            const di = 1 - d;
-                            bytes[index] = (r * d + di) * 255;
-                            bytes[index + 1] = (g * d + di) * 255;
-                            bytes[index + 2] = (b * d + di) * 255;
+                            const sat = Math.sqrt(r2) / rad;
+                            let [r, g, b] = getRgb(sat, x, y);
+                            bytes[index] = r;
+                            bytes[index + 1] = g;
+                            bytes[index + 2] = b;
                         }
                         else {
                             bytes[index] = 0xff;
@@ -146,7 +111,67 @@
                 ctx.putImageData(imgData, 0, 0);
             }
 
+            function getRgb(sat, x, y) {
+                // Within the circle
+                const a = ((x === 0) && (y === 0)) ? 0 : Math.atan2(y, x);
+                let hue = (a * 3 / Math.PI) + 3;
+                if (hue >= 6) {
+                    hue -= 6;
+                }
+                let r, g, b;
+                const phase = Math.floor(hue);
+                switch (phase) {
+                    case 0:
+                        r = hue;
+                        g = 0;
+                        b = 1;
+                        break;
+                    case 1:
+                        r = 1;
+                        g = 0;
+                        b = 2 - hue;
+                        break;
+                    case 2:
+                        r = 1;
+                        g = hue - 2;
+                        b = 0;
+                        break;
+                    case 3:
+                        r = 4 - hue;
+                        g = 1;
+                        b = 0;
+                        break;
+                    case 4:
+                        r = 0;
+                        g = 1;
+                        b = hue - 4;
+                        break;
+                    case 5:
+                        r = 0;
+                        g = 6 - hue;
+                        b = 1;
+                        break;
+                }
+                const di = 1 - sat;
+                return [
+                    Math.floor((r * sat + di) * 255),
+                    Math.floor((g * sat + di) * 255),
+                    Math.floor((b * sat + di) * 255)
+                ];
+            }
+
             updateHueSatCanvas();
+
+            divHueSat.ontouchmove = (e) => {
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const x = (touch.clientX - rect.x) / (rect.width / 2) - 1;
+                const y = (touch.clientY - rect.y) / (rect.height / 2) - 1;
+                sat = Math.min(1, Math.sqrt((x*x) + (y*y)));
+                let [r, g, b] = getRgb(sat, x, y);
+                console.log(`sat = ${sat.toFixed(2)}, r = ${r}, g = ${g}, b = ${b}`);
+                divBrightness.style.background = `linear-gradient(90deg, rgb(0,0,0), rgb(${r},${g},${b}))`;
+            }
         </script>
     </body>
 </html>
