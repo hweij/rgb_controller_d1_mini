@@ -21,27 +21,22 @@
             <input type='range' min='0' max='1023' id='bSlider' value='0'>
         </div>
 
-        <div style="display: grid; grid-template-columns: 33% 33% 33%; width: 99%;">
-            <div id="divRed">red</div>
-            <div id="divGreen">green</div>
-            <div id="divBlue">blue</div>
-        </div>
-
-        <div>
-            Presets
-        </div>
-
-        <div style="display: grid; grid-template-columns: 33% 33% 33%; width: 100%;">
-            <button>Soft red</button>
-            <button>Soft green</button>
-            <button>Evening</button>
-            <button>Soft red</button>
-            <button>Soft red</button>
-            <button>Soft red</button>
-            <button>Soft red</button>
-            <button>Soft red</button>
-            <button>Soft red</button>
-            <button>Soft red</button>
+        <div style="position: relative; width: 80%; margin-left: 10%;">
+            <canvas id="canvas" width="256" height="256" style="width: 100%;"></canvas>
+            <div style="height: 40px; margin-top: 40px; background: linear-gradient(90deg, #000000, #ffffff)">
+                <div style="height: 40px; width: 40px; background-color: red;"></div>
+            </div>
+            <div style="margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 40px; grid-gap: 20px; width: 100%;">
+                <button>Soft red</button>
+                <button>Soft green</button>
+                <button>Evening</button>
+                <button>Soft red</button>
+                <button>Soft red</button>
+                <button>Soft red</button>
+                <button>Soft red</button>
+                <button>Soft red</button>
+                <button>Soft red</button>
+            </div>
         </div>
 
         <script>
@@ -77,6 +72,81 @@
                     EL("divBlue").innerHTML = jso.b;
                 }
             }
+
+            function updateHueSatCanvas() {
+                const canvas = /** @type{HTMLCanvasElement} */(document.getElementById("canvas"));
+                const w = canvas.width;
+                const rad = Math.floor(w/2);
+                const xmin = rad - w;
+                const R2 = rad * rad;
+                const ctx = canvas.getContext("2d");
+                const imgData = ctx.getImageData(0, 0, w, w);
+                const bytes = imgData.data;
+                let index = 0;
+                for (let y=xmin; y<rad; y++) {
+                    for (let x=xmin; x<rad; x++) {
+                        const r2 = (x * x) + (y * y);
+                        if (r2 <= R2) {
+                            // Within the circle
+                            const a = Math.atan2(y, x);
+                            let hue = (a * 3 / Math.PI) + 3;
+                            if (hue >= 6) {
+                                hue -= 6;
+                            }
+                            let r, g, b;
+                            const phase = Math.floor(hue);
+                            switch (phase) {
+                                case 0:
+                                    r = hue;
+                                    g = 0;
+                                    b = 1;
+                                    break;
+                                case 1:
+                                    r = 1;
+                                    g = 0;
+                                    b = 2 - hue;
+                                    break;
+                                case 2:
+                                    r = 1;
+                                    g = hue - 2;
+                                    b = 0;
+                                    break;
+                                case 3:
+                                    r = 4 - hue;
+                                    g = 1;
+                                    b = 0;
+                                    break;
+                                case 4:
+                                    r = 0;
+                                    g = 1;
+                                    b = hue - 4;
+                                    break;
+                                case 5:
+                                    r = 0;
+                                    g = 6 - hue;
+                                    b = 1;
+                                    break;
+                            }
+                            const d = Math.sqrt(r2) / rad;
+                            const di = 1 - d;
+                            bytes[index] = (r * d + di) * 255;
+                            bytes[index + 1] = (g * d + di) * 255;
+                            bytes[index + 2] = (b * d + di) * 255;
+                        }
+                        else {
+                            bytes[index] = 0xff;
+                            bytes[index + 1] = 0xff;
+                            bytes[index + 2] = 0xff;
+                        }
+                        bytes[index + 3] = 0xff;
+                        index += 4;
+                    }
+                }
+                // Set data to canvas
+                ctx.putImageData(imgData, 0, 0);
+            }
+
+            updateHueSatCanvas();
         </script>
     </body>
 </html>
