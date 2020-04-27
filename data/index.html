@@ -15,12 +15,7 @@
         </style>
     </head>
     <body>
-        <div style='padding: 10%; display:grid; width:80%; align-items: stretch; row-gap: 20px; grid-template-columns: 100%;'>
-            <input type='range' min='0' max='1023' id='rSlider' value='0'>    
-            <input type='range' min='0' max='1023' id='gSlider' value='0'>
-            <input type='range' min='0' max='1023' id='bSlider' value='0'>
-        </div>
-
+        <div id="divColor" style="width: 100px; height: 40px; background-color: #000000;">COL</div>
         <div style="display: grid; grid-template-columns: auto; align-items: center; width: 100%;">
             <div id="divHueSat" style="padding: 40px;">
                 <canvas id="canvas" width="256" height="256" style="width: 100%;"></canvas>
@@ -53,30 +48,27 @@
             var rVal = 0;
             var gVal = 0;
             var bVal = 0;
+            var updateRequested = false;
+            var requestPending = false;
 
-            const rSlider = document.getElementById('rSlider');
-            const gSlider = document.getElementById('gSlider');
-            const bSlider = document.getElementById('bSlider');
-
-            rSlider.onchange = updateSliderRGB;
-            gSlider.onchange = updateSliderRGB;
-            bSlider.onchange = updateSliderRGB;
-            
-            function updateSliderRGB() {
-                rVal = rSlider.value;
-                gVal = gSlider.value;
-                bVal = bSlider.value;
-                updateRGB();
+            function requestUpdate() {
+                updateRequested = true;
+                if (!requestPending) {
+                    updateRGB();
+                }
             }
 
             async function updateRGB() {
-                var resp = await fetch('/api/set' + rVal + ',' + gVal + ',' + bVal);
-                var jso = await resp.json();
-                if (jso) {
-                    EL("divRed").innerHTML = jso.r;
-                    EL("divGreen").innerHTML = jso.g;
-                    EL("divBlue").innerHTML = jso.b;
+                requestPending = true;
+                while (updateRequested) {
+                    updateRequested = false;
+                    var resp = await fetch('/api/set' + rVal + ',' + gVal + ',' + bVal);
+                    var jso = await resp.json();
+                    if (jso) {
+                        EL("divColor").style.backgroundColor = `rgb(${jso.r}, ${jso.g}, ${jso.b})`;
+                    }
                 }
+                requestPending = false;
             }
 
             function updateHueSatCanvas() {
@@ -92,7 +84,15 @@
                     for (let x=xmin; x<rad; x++) {
                         const r2 = (x * x) + (y * y);
                         if (r2 <= R2) {
-                            const sat = Math.sqrt(r2) / rad;
+                            const rv = Math.sqrt(r2);
+                            let sat;
+                            if (rv < (rad - 1)) {
+                                sat = rv / (rad - 1);
+                            }
+                            else {
+                                // Blend at the outer 1 pixel circle
+                                sat = rad - rv;
+                            }
                             let [r, g, b] = getRgb(sat, x, y);
                             bytes[index] = r;
                             bytes[index + 1] = g;
@@ -162,16 +162,44 @@
 
             updateHueSatCanvas();
 
-            divHueSat.ontouchmove = (e) => {
-                const touch = e.touches[0];
+            const handlePointer = (data) => {
                 const rect = canvas.getBoundingClientRect();
-                const x = (touch.clientX - rect.x) / (rect.width / 2) - 1;
-                const y = (touch.clientY - rect.y) / (rect.height / 2) - 1;
+                const x = (data.clientX - rect.x) / (rect.width / 2) - 1;
+                const y = (data.clientY - rect.y) / (rect.height / 2) - 1;
                 sat = Math.min(1, Math.sqrt((x*x) + (y*y)));
-                let [r, g, b] = getRgb(sat, x, y);
-                console.log(`sat = ${sat.toFixed(2)}, r = ${r}, g = ${g}, b = ${b}`);
-                divBrightness.style.background = `linear-gradient(90deg, rgb(0,0,0), rgb(${r},${g},${b}))`;
+                [rval, gval, bval] = getRgb(sat, x, y);
+                console.log(`sat = ${sat.toFixed(2)}, r = ${rval}, g = ${gval}, b = ${bval}`);
+                divBrightness.style.background = `linear-gradient(90deg, rgb(0,0,0), rgb(${rval},${gval},${bval}))`;
+                requestUpdate();
             }
+
+            const handleTouch = (e) => {
+                console.log("TOUCH");
+                handlePointer( e.touches[0]);
+            }
+
+            const doTouchEnd = (e) => {
+                window.removeEventListener("touchmove", handleTouch);
+                window.removeEventListener("touchend", doTouchEnd);
+            }
+
+            const doMouseUp = (e) => {
+                window.removeEventListener("mousemove", handlePointer);
+                window.removeEventListener("mouseup", doMouseUp);
+            }
+            
+            divHueSat.addEventListener("touchstart", (e) => {
+                window.addEventListener("touchmove", handleTouch);
+                window.addEventListener("touchend", doTouchEnd);
+                console.log("TOUCH START");
+                handleTouch(e);
+                e.preventDefault();
+            });
+            divHueSat.addEventListener("mousedown", (e) => {
+                window.addEventListener("mousemove", handlePointer);
+                window.addEventListener("mouseup", doMouseUp);
+                handlePointer(e);
+            });
         </script>
     </body>
 </html>
